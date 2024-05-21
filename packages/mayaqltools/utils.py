@@ -41,10 +41,10 @@ def save_mesh(target, to_file):
 # ----- Mesh info -----
 def get_dag(object_name):
     """Return DAG for requested object"""
-    selectionList = OpenMaya.MSelectionList()
-    selectionList.add(object_name)
+    selectionList = OpenMaya.MSelectionList() # 用来存储一个或多个选中的对象
+    selectionList.add(object_name) # 将object_name添加到selectionList中
     dag = OpenMaya.MDagPath()
-    selectionList.getDagPath(0, dag)
+    selectionList.getDagPath(0, dag) # 获得第0个元素的DAG路径
     return dag
 
 
@@ -61,11 +61,12 @@ def get_mesh_dag(object_name):
 def get_vertices_np(mesh):
     """
         Retreive vertex info as np array for given mesh object
+        Retreive all vertices coordinates of a mesh
     """
-    maya_vertices = OpenMaya.MPointArray()
-    mesh.getPoints(maya_vertices, OpenMaya.MSpace.kWorld)
+    maya_vertices = OpenMaya.MPointArray() # 用来存储所有顶点坐标
+    mesh.getPoints(maya_vertices, OpenMaya.MSpace.kWorld) # 将网格的所有顶点坐标存储到maya_vertices中
 
-    vertices = np.empty((maya_vertices.length(), 3))
+    vertices = np.empty((maya_vertices.length(), 3)) # [n,3]
     for i in range(maya_vertices.length()):
         for j in range(3):
             vertices[i, j] = maya_vertices[i][j]

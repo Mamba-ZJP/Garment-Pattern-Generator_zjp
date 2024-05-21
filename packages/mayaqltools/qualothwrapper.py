@@ -20,7 +20,8 @@ def load_plugin():
         Inquire here: http://www.fxgear.net/vfxpricing
     """
     maya_year = int(mel.eval('getApplicationVersionAsFloat'))
-    plugin_name = 'qualoth_' + str(maya_year) + '_x64'
+    # plugin_name = 'qualoth_' + str(maya_year) + '_x64'
+    plugin_name = 'qualoth'
     print('Loading ', plugin_name)
 
     cmds.loadPlugin(plugin_name)

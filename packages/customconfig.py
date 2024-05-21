@@ -229,7 +229,8 @@ class Properties():
         """ Load properties from previously created file """
         extention = Path(filename).suffix.lower()
         if extention == '.json':
-            with open(filename, 'r') as f_json:
+            with open(filename, 'r', encoding='utf-8') as f_json:
+                print('Loading properties from:', filename)
                 return json.load(f_json)
         elif extention == '.yaml':
             with open(filename, 'r') as f:

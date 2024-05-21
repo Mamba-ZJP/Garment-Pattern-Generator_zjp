@@ -73,7 +73,7 @@ class MayaGarment(wrappers.VisPattern):
             raise PatternLoadingError('{}::{}::Provided pattern has self-intersecting panels. Nothing is loaded'.format(
                 self.__class__.__name__, self.name))
     
-
+        print(f'loaded to maya: {self.loaded_to_maya}') # False
         if self.loaded_to_maya:
             # save the latest sim info
             self.fetchSimProps()
@@ -304,10 +304,11 @@ class MayaGarment(wrappers.VisPattern):
                 'MayaGarmentError::Pattern is not yet loaded. Cannot update verts info')
 
         # working with meshes http://www.fevrierdorian.com/blog/post/2011/09/27/Quickly-retrieve-vertex-positions-of-a-Maya-mesh-%28English-Translation%29
-        cloth_dag = self.get_qlcloth_geom_dag()
+        cloth_dag = self.get_qlcloth_geom_dag() # DAG Direct Acyclic Graph，每个node指向衣物网格
+        # print(f'len(cloth_dag): {len(cloth_dag)}') # 
         
-        mesh = OpenMaya.MFnMesh(cloth_dag)
-
+        mesh = OpenMaya.MFnMesh(cloth_dag) # 用于操作mesh的函数集类，cloth_dag指向多个mesh node
+        # print(f'len(mesh): {len(mesh)}')
         vertices = utils.get_vertices_np(mesh)
 
         self.last_verts = self.current_verts
@@ -332,10 +333,19 @@ class MayaGarment(wrappers.VisPattern):
             raise RuntimeError('MayaGarmentError::Pattern is not yet loaded.')
 
         if 'qlClothOut' not in self.MayaObjects:
-            children = cmds.listRelatives(self.MayaObjects['pattern'], ad=True)
+            # listRelatives：返回指定对象的子对象，所有后代对象或者父对象，
+            children = cmds.listRelatives(self.MayaObjects['pattern'], ad=True) 
+            print(f'type(children): {type(children)}') # List
+            print(f'len(children): {len(children)}') # before cutting: 148; after cutting: 172
+
             cloths = [obj for obj in children 
                       if 'qlCloth' in obj and 'Out' in obj and 'Shape' not in obj]
-            self.MayaObjects['qlClothOut'] = cloths[0]
+            print(f'get_qlcloth_geo: len(cloths): {len(cloths)}') # before cutting: 2; after 2
+            # ! 只获得了第一个匹配的布料对象？为什么是第一个？肯定是cutting导致这个匹配机制改变了
+            # maria的数据集这个cloth只有一个，但是style3d导入进去的居然有2个，这个应该是根本原因？
+            # qlCloth, Out, Shape分别代表的是啥呢？
+            self.MayaObjects['qlClothOut'] = cloths[-1]
+            # self.MayaObjects['qlClothOut'] = cloths[0]
 
         return self.MayaObjects['qlClothOut']
 
@@ -350,6 +360,7 @@ class MayaGarment(wrappers.VisPattern):
             children = cmds.listRelatives(self.MayaObjects['pattern'], ad=True)
             cloths = [obj for obj in children 
                       if 'qlCloth' in obj and 'Out' not in obj and 'Shape' in obj]
+            print(f'get_qlcloth_props_obj: len(cloths): {len(cloths)}') # before cutting: 2; after cutting: 2
             self.MayaObjects['qlCloth'] = cloths[0]
 
         return self.MayaObjects['qlCloth']
@@ -362,6 +373,7 @@ class MayaGarment(wrappers.VisPattern):
             raise RuntimeError('MayaGarmentError::Pattern is not yet loaded.')
 
         if 'shapeDAG' not in self.MayaObjects:
+            print('MayaGarment::Getting shape DAG')
             self.MayaObjects['shapeDAG'] = utils.get_dag(self.get_qlcloth_geomentry())
 
         return self.MayaObjects['shapeDAG']
@@ -566,13 +578,17 @@ class MayaGarment(wrappers.VisPattern):
         if not self.loaded_to_maya:
             raise RuntimeError('Garment should be loaded when evaluating vertex segmentation')
 
-        self.update_verts_info()
+        self.update_verts_info() # 更新current_verts上的点，根据新的mesh
         self.vertex_labels = [None] * len(self.current_verts)
+        print(f'len(self.current_verts): {len(self.current_verts)}') #! before cutting: 11577; after cutting: 1098 为什么突然变得这么少了？
 
         # -- Stitches (provided in qualoth objects directly) ---
+        # 这里就是要找到mesh上所有的点，给对应的stitch上的点标上stitch的标签，但是out of range =》self.current_verts出现问题 还是 on_stitches出现问题?
         on_stitches = self._verts_on_stitches()  # TODO I can even distinguish stitches from each other!
+        print(f'len(on_stitches): {len(on_stitches)}') # before cutting: 892; after cutting: 1140
+
         for idx in on_stitches:
-            self.vertex_labels[idx] = 'stitch'
+            self.vertex_labels[idx] = 'stitch' # list assignment out of range
         
         # --- vertices ---
         vertices = self.current_verts
@@ -903,6 +919,7 @@ class MayaGarment(wrappers.VisPattern):
 class MayaGarmentWithUI(MayaGarment):
     """Extension of MayaGarment that can generate GUI for controlling the pattern"""
     def __init__(self, pattern_file, clean_on_die=False):
+        print('MayaGarmentWithUI::__init__')
         super(MayaGarmentWithUI, self).__init__(pattern_file, clean_on_die)
         self.ui_top_layout = None
         self.ui_controls = {}

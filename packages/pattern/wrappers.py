@@ -34,6 +34,7 @@ class VisPattern(core.ParametrizedPattern):
     # ------------ Interface -------------
 
     def __init__(self, pattern_file=None, view_ids=True):
+        # print('VisPattern init')
         super().__init__(pattern_file)
 
         # tnx to this all patterns produced from the same template will have the same 

@@ -60,6 +60,7 @@ class BasicPattern(object):
 
     def __init__(self, pattern_file=None):
         
+        # print('BasicPattern::__init__')
         self.spec_file = pattern_file
         
         if pattern_file is not None: # load pattern from file
@@ -76,13 +77,15 @@ class BasicPattern(object):
     def reloadJSON(self):
         """(Re)loads pattern info from spec file. 
         Useful when spec is updated from outside"""
+        print('reloadJSON::{}'.format(self.spec_file))
         if self.spec_file is None:
             print('BasicPattern::Warning::{}::Pattern is not connected to any file. Reloadig from file request ignored.'.format(
                 self.name
             ))
             return
 
-        with open(self.spec_file, 'r') as f_json:
+        with open(self.spec_file, 'r', encoding='utf-8') as f_json:
+            # print(f'!!!spec_file: {self.spec_file}')
             self.spec = json.load(f_json)
         self.pattern = self.spec['pattern']
         self.properties = self.spec['properties']  # mandatory part
@@ -105,7 +108,7 @@ class BasicPattern(object):
             spec_file = os.path.join(path, (self.name + tag + '_specification.json'))
 
         # Save specification
-        with open(spec_file, 'w') as f_json:
+        with open(spec_file, 'w', encoding='utf-8') as f_json:
             json.dump(self.spec, f_json, indent=2)
         
         return log_dir
@@ -214,10 +217,12 @@ class BasicPattern(object):
         vertices = np.array(panel['vertices'])
 
         # out of 2D bounding box sides' midpoints choose the one that is highest in 3D
+        # 找到的是外接矩阵的xy
         top_right = vertices.max(axis=0)
         low_left = vertices.min(axis=0)
         mid_x = (top_right[0] + low_left[0]) / 2
         mid_y = (top_right[1] + low_left[1]) / 2
+        # 找到邻接矩阵的四边中点
         mid_points_2D = [
             [mid_x, top_right[1]], 
             [mid_x, low_left[1]],
@@ -390,10 +395,10 @@ class BasicPattern(object):
         Derives absolute coordinates of Bezier control point given as an offset
         """
         edge = end - start
-        edge_perp = np.array([-edge[1], edge[0]])
+        edge_perp = np.array([-edge[1], edge[0]]) # l2 norm是一样的，所以用这个为垂直向量
 
-        control_start = start + control_scale[0] * edge
-        control_point = control_start + control_scale[1] * edge_perp
+        control_start = start + control_scale[0] * edge # 计算起点方向上的分量
+        control_point = control_start + control_scale[1] * edge_perp # 垂直方向的分量
 
         return control_point 
     
@@ -417,8 +422,9 @@ class BasicPattern(object):
         # Y
         control_projected = edge_vec * control_scale[0]
         vert_comp = control_vec - control_projected  
+        # 算出垂直向量 / edge_len
         control_scale[1] = np.linalg.norm(vert_comp) / edge_len
-        # Distinguish left&right curvature
+        # 这里用叉积去判断控制点在曲线的哪个方向，即曲线是朝哪个方向完全的
         control_scale[1] *= np.sign(np.cross(control_point, edge_vec))
 
         return control_scale 
@@ -488,6 +494,7 @@ class BasicPattern(object):
         for edge in panel['edges']:
             edge_ids = edge['endpoints']
             edge_coords = vertices[edge_ids]
+            # curv coordinates are relative coordinates!!
             if 'curvature' in edge:
                 curv_abs = self._control_to_abs_coord(edge_coords[0], edge_coords[1], edge['curvature'])
                 # view curvy edge as two segments
@@ -529,6 +536,7 @@ class ParametrizedPattern(BasicPattern):
         Update pattern with new parameter values & randomize those parameters
     """
     def __init__(self, pattern_file=None):
+        print('ParametrizedPattern::__init__')
         super(ParametrizedPattern, self).__init__(pattern_file)
         self.parameters = self.spec['parameters']
 
@@ -573,6 +581,7 @@ class ParametrizedPattern(BasicPattern):
     def reloadJSON(self):
         """(Re)loads pattern info from spec file. 
         Useful when spec is updated from outside"""
+        print('parametrized: reloadJSON::{}'.format(self.spec_file))
         super(ParametrizedPattern, self).reloadJSON()
 
         self.parameters = self.spec['parameters']
